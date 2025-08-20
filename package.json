@@ -1,0 +1,13 @@
+{
+  "name": "conversor-darf",
+  "version": "1.0.0",
+  "description": "Converte Comprovantes DARF (PDF) em planilha Excel",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node converter-darf-para-excel.js \"pdfs/*.pdf\" \"dist/saida.xlsx\""
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "pdf-parse": "^1.1.1"
+  }
+}
