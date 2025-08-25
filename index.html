@@ -341,6 +341,16 @@
             font-weight: bold;
         }
         
+        .file-header {
+            background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+            color: white !important;
+            font-weight: bold;
+        }
+        
+        .file-header td {
+            border-top: 2px solid #2c3e50;
+        }
+        
         .loading {
             display: none;
             text-align: center;
@@ -612,73 +622,229 @@
         }
 
         async function extractDataFromPDF(file) {
-            // Simular extração de dados (substitua pela lógica real)
-            const text = await readPDFText(file);
+            // Usar PDF.js para ler o PDF real
+            const arrayBuffer = await file.arrayBuffer();
+            const text = await readPDFWithPDFJS(arrayBuffer);
             return parseDARFData(text, file.name);
         }
 
-        async function readPDFText(file) {
-            // Esta é uma simulação. Em uma implementação real, você usaria uma biblioteca como PDF.js
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    // Dados simulados baseados no exemplo fornecido
-                    resolve(`
-                        CNPJ: 35.247.621/0001-59 ABASTECEDORA DE COMBUSTIVEIS ITACOLOMI
-                        Período Apuração: 30/06/2025
-                        Data de Vencimento: 18/07/2025
-                        Número do Documento: 07162519253354530
-                        1082 CONTR PREV DESCONTA SEGURADO 1.649,18 - - 1.649,18
-                        1138 CONTR PREVIDENCIÁRIA EMPREGADOR/EMPRESA 3.905,64 - - 3.905,64
-                        1646 CONTRIB PREV RISCO AMBIENTAL/APOSENT ESPECIAL 585,84 - - 585,84
-                    `);
-                }, 1000);
+        async function readPDFWithPDFJS(arrayBuffer) {
+            try {
+                // Carregar PDF.js dinamicamente
+                if (typeof pdfjsLib === 'undefined') {
+                    await loadPDFJS();
+                }
+
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                
+                // Extrair texto de todas as páginas
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                }
+                
+                return fullText;
+            } catch (error) {
+                console.error('Erro ao ler PDF:', error);
+                throw new Error('Erro ao processar PDF: ' + error.message);
+            }
+        }
+
+        function loadPDFJS() {
+            return new Promise((resolve, reject) => {
+                if (typeof pdfjsLib !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                script.onload = () => {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    resolve();
+                };
+                script.onerror = () => reject(new Error('Falha ao carregar PDF.js'));
+                document.head.appendChild(script);
             });
         }
 
         function parseDARFData(text, fileName) {
-            // Parser simulado - substitua pela lógica real de extração
             const data = [];
-            const lines = text.split('\n').filter(line => line.trim());
+            console.log(`Processando arquivo: ${fileName}`);
+            console.log('Texto extraído:', text.substring(0, 500)); // Log para debug
             
-            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '', documento = '';
+            // Patterns mais robustos para DARF
+            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
+            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
             
-            lines.forEach(line => {
-                if (line.includes('CNPJ:')) {
-                    const match = line.match(/(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+(.+)/);
-                    if (match) {
-                        cnpj = match[1];
-                        razaoSocial = match[2].trim();
-                    }
-                }
-                if (line.includes('Período Apuração:')) {
-                    periodo = line.split(':')[1]?.trim() || '';
-                }
-                if (line.includes('Data de Vencimento:')) {
-                    vencimento = line.split(':')[1]?.trim() || '';
-                }
-                if (line.includes('Número do Documento:')) {
-                    documento = line.split(':')[1]?.trim() || '';
-                }
+            // Extrair informações básicas
+            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
+            
+            const cnpjMatch = text.match(cnpjPattern);
+            if (cnpjMatch) {
+                cnpj = cnpjMatch[1];
+                razaoSocial = cnpjMatch[2].trim();
+            }
+            
+            const periodoMatch = text.match(periodoPattern);
+            if (periodoMatch) {
+                periodo = periodoMatch[1];
+            }
+            
+            const vencimentoMatch = text.match(vencimentoPattern);
+            if (vencimentoMatch) {
+                vencimento = vencimentoMatch[1];
+            }
+            
+            // Extrair documentos - pode haver vários
+            const documentos = [];
+            const docMatches = text.matchAll(/Número\s+do\s+Documento[:\s]*(\d+)/gi);
+            for (const match of docMatches) {
+                documentos.push(match[1]);
+            }
+            
+            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodo, vencimento, documentos });
+            
+            // Patterns mais específicos para códigos e valores
+            const patterns = [
+                // Padrão principal: código descrição valor_principal - - valor_total
+                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/g,
+                // Padrão alternativo: código descrição principal multa juros total
+                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g,
+                // Padrão para linhas com valores separados por espaços
+                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)]{10,}?)\s+([\d\.,]+)(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?/g
+            ];
+            
+            let currentDocIndex = 0;
+            let currentDocument = documentos[0] || 'N/A';
+            
+            // Tentar cada padrão
+            for (const pattern of patterns) {
+                const matches = text.matchAll(pattern);
                 
-                // Parse de linhas de tributos
-                const tributoMatch = line.match(/(\d{4})\s+([A-Z\s\-\/]+?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/);
-                if (tributoMatch) {
-                    data.push({
+                for (const match of matches) {
+                    const codigo = match[1];
+                    const descricao = match[2].trim().replace(/\s+/g, ' ');
+                    
+                    // Determinar valores baseado no número de grupos capturados
+                    let principal, multa, juros, total;
+                    
+                    if (match.length === 5) {
+                        // Padrão: código descrição principal - - total
+                        principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
+                        multa = 0;
+                        juros = 0;
+                        total = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
+                    } else if (match.length === 7) {
+                        // Padrão: código descrição principal multa juros total
+                        principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
+                        multa = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
+                        juros = parseFloat(match[5].replace(/\./g, '').replace(',', '.'));
+                        total = parseFloat(match[6].replace(/\./g, '').replace(',', '.'));
+                    } else {
+                        continue; // Pular se não conseguir determinar o padrão
+                    }
+                    
+                    // Validar se os valores são números válidos
+                    if (isNaN(principal) || isNaN(total)) {
+                        continue;
+                    }
+                    
+                    // Verificar se mudou de documento baseado na posição no texto
+                    const matchPosition = match.index;
+                    const textBeforeMatch = text.substring(0, matchPosition);
+                    const docOccurrences = (textBeforeMatch.match(/Número\s+do\s+Documento/gi) || []).length;
+                    
+                    if (docOccurrences > currentDocIndex && documentos[docOccurrences - 1]) {
+                        currentDocIndex = docOccurrences - 1;
+                        currentDocument = documentos[currentDocIndex];
+                    }
+                    
+                    const record = {
                         arquivo: fileName,
                         cnpj: cnpj,
                         razaoSocial: razaoSocial,
                         periodoApuracao: periodo,
                         dataVencimento: vencimento,
-                        numeroDocumento: documento,
-                        codigo: tributoMatch[1],
-                        descricao: tributoMatch[2].trim(),
-                        principal: parseFloat(tributoMatch[3].replace(/\./g, '').replace(',', '.')),
-                        multa: 0.00,
-                        juros: 0.00,
-                        total: parseFloat(tributoMatch[4].replace(/\./g, '').replace(',', '.'))
-                    });
+                        numeroDocumento: currentDocument,
+                        codigo: codigo,
+                        descricao: descricao,
+                        principal: principal,
+                        multa: multa || 0,
+                        juros: juros || 0,
+                        total: total
+                    };
+                    
+                    data.push(record);
                 }
-            });
+                
+                // Se encontrou dados, não precisa tentar outros padrões
+                if (data.length > 0) {
+                    break;
+                }
+            }
+            
+            console.log(`Extraídos ${data.length} registros do arquivo ${fileName}`);
+            
+            // Se não conseguiu extrair nada, tentar uma abordagem mais simples
+            if (data.length === 0) {
+                console.log('Tentando extração alternativa...');
+                
+                // Dividir texto em linhas e procurar por números que podem ser códigos
+                const lines = text.split(/[\n\r]+/).filter(line => line.trim());
+                
+                for (const line of lines) {
+                    // Procurar linhas que começam com 4 dígitos
+                    const simpleMatch = line.match(/^(\d{4})\s+(.+?)(\d{1,3}(?:\.\d{3})*,\d{2})/);
+                    if (simpleMatch) {
+                        const codigo = simpleMatch[1];
+                        const descricao = simpleMatch[2].trim();
+                        const valorStr = simpleMatch[3];
+                        const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+                        
+                        if (!isNaN(valor)) {
+                            data.push({
+                                arquivo: fileName,
+                                cnpj: cnpj || 'N/A',
+                                razaoSocial: razaoSocial || fileName.replace('.pdf', ''),
+                                periodoApuracao: periodo || 'N/A',
+                                dataVencimento: vencimento || 'N/A',
+                                numeroDocumento: currentDocument,
+                                codigo: codigo,
+                                descricao: descricao,
+                                principal: valor,
+                                multa: 0,
+                                juros: 0,
+                                total: valor
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Se ainda não conseguiu nada, criar um registro indicando que o arquivo foi processado mas sem dados
+            if (data.length === 0) {
+                console.warn(`Nenhum dado estruturado encontrado em ${fileName}`);
+                data.push({
+                    arquivo: fileName,
+                    cnpj: cnpj || 'Não identificado',
+                    razaoSocial: razaoSocial || 'Não identificado',
+                    periodoApuracao: periodo || 'Não identificado',
+                    dataVencimento: vencimento || 'Não identificado',
+                    numeroDocumento: 'Não identificado',
+                    codigo: '0000',
+                    descricao: 'ARQUIVO PROCESSADO - DADOS NÃO IDENTIFICADOS',
+                    principal: 0,
+                    multa: 0,
+                    juros: 0,
+                    total: 0
+                });
+            }
             
             return data;
         }
@@ -720,23 +886,84 @@
             const tbody = document.getElementById('darfTableBody');
             tbody.innerHTML = '';
 
+            // Agrupar dados por arquivo para mostrar separadamente
+            const groupedByFile = {};
             extractedData.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.cnpj}</td>
-                    <td>${item.razaoSocial}</td>
-                    <td>${item.periodoApuracao}</td>
-                    <td>${item.dataVencimento}</td>
-                    <td>${item.numeroDocumento}</td>
-                    <td>${item.codigo}</td>
-                    <td>${item.descricao}</td>
-                    <td class="currency">R$ ${item.principal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td class="currency">R$ ${item.multa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td class="currency">R$ ${item.juros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td class="currency">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                `;
-                tbody.appendChild(row);
+                if (!groupedByFile[item.arquivo]) {
+                    groupedByFile[item.arquivo] = [];
+                }
+                groupedByFile[item.arquivo].push(item);
             });
+
+            // Exibir dados agrupados por arquivo
+            Object.keys(groupedByFile).forEach((fileName, fileIndex) => {
+                // Cabeçalho do arquivo
+                const headerRow = document.createElement('tr');
+                headerRow.className = 'file-header';
+                headerRow.style.backgroundColor = '#34495e';
+                headerRow.style.color = 'white';
+                headerRow.style.fontWeight = 'bold';
+                headerRow.innerHTML = `
+                    <td colspan="11" style="padding: 12px;">
+                        📄 ${fileName} (${groupedByFile[fileName].length} registro(s))
+                    </td>
+                `;
+                tbody.appendChild(headerRow);
+
+                let fileTotal = 0;
+
+                // Dados do arquivo
+                groupedByFile[fileName].forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.cnpj}</td>
+                        <td>${item.razaoSocial}</td>
+                        <td>${item.periodoApuracao}</td>
+                        <td>${item.dataVencimento}</td>
+                        <td>${item.numeroDocumento}</td>
+                        <td>${item.codigo}</td>
+                        <td>${item.descricao}</td>
+                        <td class="currency">R$ ${item.principal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="currency">R$ ${item.multa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="currency">R$ ${item.juros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="currency">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    `;
+                    tbody.appendChild(row);
+                    fileTotal += item.total;
+                });
+
+                // Total do arquivo
+                const totalRow = document.createElement('tr');
+                totalRow.className = 'total-row';
+                totalRow.innerHTML = `
+                    <td colspan="7"><strong>SUBTOTAL - ${fileName}</strong></td>
+                    <td class="currency"><strong>-</strong></td>
+                    <td class="currency"><strong>-</strong></td>
+                    <td class="currency"><strong>-</strong></td>
+                    <td class="currency"><strong>R$ ${fileTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+                `;
+                tbody.appendChild(totalRow);
+
+                // Espaçador entre arquivos
+                if (fileIndex < Object.keys(groupedByFile).length - 1) {
+                    const spacerRow = document.createElement('tr');
+                    spacerRow.innerHTML = '<td colspan="11" style="height: 10px; border: none;"></td>';
+                    tbody.appendChild(spacerRow);
+                }
+            });
+
+            // Total geral
+            const grandTotal = extractedData.reduce((sum, item) => sum + (item.total || 0), 0);
+            const grandTotalRow = document.createElement('tr');
+            grandTotalRow.className = 'grand-total-row';
+            grandTotalRow.innerHTML = `
+                <td colspan="7"><strong>TOTAL GERAL</strong></td>
+                <td class="currency"><strong>-</strong></td>
+                <td class="currency"><strong>-</strong></td>
+                <td class="currency"><strong>-</strong></td>
+                <td class="currency"><strong>R$ ${grandTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+            `;
+            tbody.appendChild(grandTotalRow);
 
             document.getElementById('darfTable').style.display = 'table';
         }
