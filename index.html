@@ -642,7 +642,7 @@
             const data = [];
             const lines = text.split('\n').filter(line => line.trim());
             
-            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '', documento = '';
+            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '', arrecadacao = '', documento = '';
             
             lines.forEach(line => {
                 if (line.includes('CNPJ:')) {
@@ -661,6 +661,9 @@
                 if (line.includes('Número do Documento:')) {
                     documento = line.split(':')[1]?.trim() || '';
                 }
+                if (line.includes('Data de Arrecadação:')) {
+                    arrecadacao = line.split(':')[1]?.trim() || '';  
+                }
                 
                 // Parse de linhas de tributos
                 const tributoMatch = line.match(/(\d{4})\s+([A-Z\s\-\/]+?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/);
@@ -671,6 +674,7 @@
                         razaoSocial: razaoSocial,
                         periodoApuracao: periodo,
                         dataVencimento: vencimento,
+                        dataArrecadacao: arrecadacao,
                         numeroDocumento: documento,
                         codigo: tributoMatch[1],
                         descricao: tributoMatch[2].trim(),
@@ -729,6 +733,7 @@
                     <td>${item.razaoSocial}</td>
                     <td>${item.periodoApuracao}</td>
                     <td>${item.dataVencimento}</td>
+                    <td>${item.dataArrecadacao}</td>
                     <td>${item.numeroDocumento}</td>
                     <td>${item.codigo}</td>
                     <td>${item.descricao}</td>
@@ -782,7 +787,7 @@
                 return;
             }
 
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
+            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Data de Arrecadação', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
             
             let csv = [headers.map(h => `"${h}"`).join(',')];
             
@@ -792,6 +797,7 @@
                     `"${item.razaoSocial}"`,
                     `"${item.periodoApuracao}"`,
                     `"${item.dataVencimento}"`,
+                     `"${item.dataArrecadacao}"`,
                     `"${item.numeroDocumento}"`,
                     `"${item.codigo}"`,
                     `"${item.descricao}"`,
@@ -824,7 +830,7 @@
                 return;
             }
 
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
+            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Data de Arrecadação', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
             
             let copyData = headers.join('\t') + '\n';
             
@@ -834,6 +840,7 @@
                     item.razaoSocial,
                     item.periodoApuracao,
                     item.dataVencimento,
+                    item.dataArrecadacao,
                     item.numeroDocumento,
                     item.codigo,
                     item.descricao,
