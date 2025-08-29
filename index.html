@@ -678,10 +678,20 @@
             console.log('Texto extraído:', text.substring(0, 500)); // Log para debug
             
             // Patterns mais robustos para DARF
-            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
-            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
+            // CNPJ e Razão Social
+            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?)/i;
+
+            // Período de Apuração
+            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{4})/i;
+
+           // Data de Vencimento
+           const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+
+           // Número do Documento ou Pagamento
+          const documentoPattern = /Número\s+do\s+(?:Documento|Pagamento)[:\s]*(\d{10,20})/i;
+
+          // Data de Arrecadação
+          const arrecadacaoPattern = /Data\s+de\s+Arrecadação[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
             
             // Extrair informações básicas
             let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
