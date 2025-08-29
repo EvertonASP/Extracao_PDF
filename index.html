@@ -678,20 +678,10 @@
             console.log('Texto extraído:', text.substring(0, 500)); // Log para debug
             
             // Patterns mais robustos para DARF
-            // CNPJ e Razão Social
-            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?)/i;
-
-            // Período de Apuração
-            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{4})/i;
-
-           // Data de Vencimento
-           const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-
-           // Número do Documento ou Pagamento
-          const documentoPattern = /Número\s+do\s+(?:Documento|Pagamento)[:\s]*(\d{10,20})/i;
-
-          // Data de Arrecadação
-          const arrecadacaoPattern = /Data\s+de\s+Arrecadação[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
+            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
             
             // Extrair informações básicas
             let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
@@ -1095,5 +1085,32 @@
         // Inicialização
         updateFileList();
     </script>
+
+<script>
+// Expressões regulares para extração de campos fiscais
+const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?)/i;
+const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{4})/i;
+const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+const documentoPattern = /Número\s+do\s+(?:Documento|Pagamento)[:\s]*(\d{10,20})/i;
+const arrecadacaoPattern = /Banco\s+Data\s+de\s+Arrecadação\s+[^\d]*(\d{2}\/\d{2}\/\d{4})/i;
+
+function extrairCampos(texto) {
+  const cnpjMatch = texto.match(cnpjPattern);
+  const periodoMatch = texto.match(periodoPattern);
+  const vencimentoMatch = texto.match(vencimentoPattern);
+  const documentoMatch = texto.match(documentoPattern);
+  const arrecadacaoMatch = texto.match(arrecadacaoPattern);
+
+  return {
+    cnpj: cnpjMatch ? cnpjMatch[1] : '',
+    razaoSocial: cnpjMatch ? cnpjMatch[2] : '',
+    periodo: periodoMatch ? periodoMatch[1] : '',
+    vencimento: vencimentoMatch ? vencimentoMatch[1] : '',
+    documento: documentoMatch ? documentoMatch[1] : '',
+    arrecadacao: arrecadacaoMatch ? arrecadacaoMatch[1] : ''
+  };
+}
+</script>
+
 </body>
 </html>
