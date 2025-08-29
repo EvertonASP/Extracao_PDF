@@ -1,10 +1,11 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processador de PDF DARF</title>
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Processador de PDF DARF</title>
+<style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -410,90 +411,80 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔍 Processador de PDF DARF</h1>
-            <p class="subtitle">Extração automática de dados fiscais</p>
-        </div>
-
-        <div class="controls">
-            <div class="file-selector">
-                <h3>📁 Selecionar PDFs</h3>
-                
-                <div class="file-drop-zone" id="dropZone">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="pdfFile" multiple accept=".pdf">
-                        <div>
+<div class="container">
+<div class="header">
+<h1>🔍 Processador de PDF DARF</h1>
+<p class="subtitle">Extração automática de dados fiscais</p>
+</div>
+<div class="controls">
+<div class="file-selector">
+<h3>📁 Selecionar PDFs</h3>
+<div class="file-drop-zone" id="dropZone">
+<div class="file-input-wrapper">
+<input accept=".pdf" id="pdfFile" multiple="" type="file"/>
+<div>
                             📄 Clique aqui ou arraste PDFs
-                            <br>
-                            <small>Aceita múltiplos arquivos PDF</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="selected-files" id="selectedFiles"></div>
-            </div>
-            
-            <div class="action-buttons">
-                <h3>⚡ Ações</h3>
-                <button class="btn btn-primary" id="processBtn" onclick="processAllPDFs()">
+                            <br/>
+<small>Aceita múltiplos arquivos PDF</small>
+</div>
+</div>
+</div>
+<div class="selected-files" id="selectedFiles"></div>
+</div>
+<div class="action-buttons">
+<h3>⚡ Ações</h3>
+<button class="btn btn-primary" id="processBtn" onclick="processAllPDFs()">
                     🚀 Processar PDFs
                 </button>
-                <button class="btn btn-secondary" id="clearBtn" onclick="clearFiles()">
+<button class="btn btn-secondary" id="clearBtn" onclick="clearFiles()">
                     🗑️ Limpar Lista
                 </button>
-                <button class="btn btn-export" id="exportCsvBtn" onclick="exportToCSV()" style="display: none;">
+<button class="btn btn-export" id="exportCsvBtn" onclick="exportToCSV()" style="display: none;">
                     📊 Exportar CSV
                 </button>
-                <button class="btn btn-export" id="exportExcelBtn" onclick="exportToExcel()" style="display: none;">
+<button class="btn btn-export" id="exportExcelBtn" onclick="exportToExcel()" style="display: none;">
                     📋 Copiar Excel
                 </button>
-            </div>
-        </div>
-
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-            <div id="currentFile" style="margin-top: 10px; color: #666; text-align: center;"></div>
-        </div>
-
-        <div class="status" id="status"></div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Processando arquivos PDF...</p>
-        </div>
-
-        <div class="results-container" id="resultsContainer">
-            <div class="summary" id="summaryContainer">
-                <h3>📊 Resumo da Extração</h3>
-                <div class="summary-grid" id="summaryGrid"></div>
-            </div>
-
-            <table id="darfTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>CNPJ</th>
-                        <th>Razão Social</th>
-                        <th>Período de Apuração</th>
-                        <th>Data de Vencimento</th>
-                        <th>Número do Documento</th>
-                        <th>Código</th>
-                        <th>Descrição</th>
-                        <th>Principal (R$)</th>
-                        <th>Multa (R$)</th>
-                        <th>Juros (R$)</th>
-                        <th>Total (R$)</th>
-						<th>Data da Arrecadação</th>
-                    </tr>
-                </thead>
-                <tbody id="darfTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
+</div>
+</div>
+<div class="progress-container" id="progressContainer">
+<div class="progress-bar">
+<div class="progress-fill" id="progressFill">0%</div>
+</div>
+<div id="currentFile" style="margin-top: 10px; color: #666; text-align: center;"></div>
+</div>
+<div class="status" id="status"></div>
+<div class="loading" id="loading">
+<div class="spinner"></div>
+<p>Processando arquivos PDF...</p>
+</div>
+<div class="results-container" id="resultsContainer">
+<div class="summary" id="summaryContainer">
+<h3>📊 Resumo da Extração</h3>
+<div class="summary-grid" id="summaryGrid"></div>
+</div>
+<table id="darfTable" style="display: none;">
+<thead>
+<tr>
+<th>CNPJ</th>
+<th>Razão Social</th>
+<th>Período de Apuração</th>
+<th>Data de Vencimento</th>
+<th>Número do Documento</th>
+<th>Código</th>
+<th>Descrição</th>
+<th>Principal (R$)</th>
+<th>Multa (R$)</th>
+<th>Juros (R$)</th>
+<th>Total (R$)</th>
+<th>Data da Arrecadação</th>
+</tr>
+</thead>
+<tbody id="darfTableBody"></tbody>
+</table>
+</div>
+</div>
+<script>
         let selectedFiles = [];
         let extractedData = [];
 
@@ -1087,30 +1078,26 @@
     </script>
 
 <script>
-// Expressões regulares para extração de campos fiscais
-const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?)/i;
-const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{4})/i;
-const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-const documentoPattern = /Número\s+do\s+(?:Documento|Pagamento)[:\s]*(\d{10,20})/i;
-const arrecadacaoPattern = /Banco\s+Data\s+de\s+Arrecadação\s+[^\d]*(\d{2}\/\d{2}\/\d{4})/i;
+// Expressão para linha compacta com todos os campos
+const linhaCompactaPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{14,20})/i;
 
+// Expressão para Data de Arrecadação
+const arrecadacaoPattern = /(\\d{2}\\/\\d{2}\\/\\d{4})\\s+341\\s+-\\s+BANCO ITAU/i;
+
+// Função de extração
 function extrairCampos(texto) {
-  const cnpjMatch = texto.match(cnpjPattern);
-  const periodoMatch = texto.match(periodoPattern);
-  const vencimentoMatch = texto.match(vencimentoPattern);
-  const documentoMatch = texto.match(documentoPattern);
+  const linhaMatch = texto.match(linhaCompactaPattern);
   const arrecadacaoMatch = texto.match(arrecadacaoPattern);
 
   return {
-    cnpj: cnpjMatch ? cnpjMatch[1] : '',
-    razaoSocial: cnpjMatch ? cnpjMatch[2] : '',
-    periodo: periodoMatch ? periodoMatch[1] : '',
-    vencimento: vencimentoMatch ? vencimentoMatch[1] : '',
-    documento: documentoMatch ? documentoMatch[1] : '',
+    cnpj: linhaMatch ? linhaMatch[1] : '',
+    razaoSocial: linhaMatch ? linhaMatch[2].trim() : '',
+    periodo: linhaMatch ? linhaMatch[3] : '',
+    vencimento: linhaMatch ? linhaMatch[4] : '',
+    documento: linhaMatch ? linhaMatch[5] : '',
     arrecadacao: arrecadacaoMatch ? arrecadacaoMatch[1] : ''
   };
 }
 </script>
-
 </body>
 </html>
