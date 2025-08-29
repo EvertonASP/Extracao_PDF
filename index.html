@@ -1076,7 +1076,6 @@
         // Inicialização
         updateFileList();
     </script>
-
 <script>
 // Expressão para linha compacta com todos os campos
 const linhaCompactaPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{14,20})/i;
@@ -1099,5 +1098,22 @@ function extrairCampos(texto) {
   };
 }
 </script>
-</body>
+<script>
+function extrairCampos(texto) {
+  const linhaCompactaPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{14,20})/i;
+  const arrecadacaoPattern = /(\d{2}\/\d{2}\/\d{4})\s+341\s+-\s+BANCO ITAU/i;
+
+  const linhaMatch = texto.match(linhaCompactaPattern);
+  const arrecadacaoMatch = texto.match(arrecadacaoPattern);
+
+  return {
+    cnpj: linhaMatch ? linhaMatch[1] : '',
+    razaoSocial: linhaMatch ? linhaMatch[2].trim() : '',
+    periodo: linhaMatch ? linhaMatch[3] : '',
+    vencimento: linhaMatch ? linhaMatch[4] : '',
+    documento: linhaMatch ? linhaMatch[5] : '',
+    arrecadacao: arrecadacaoMatch ? arrecadacaoMatch[1] : ''
+  };
+}
+</script></body>
 </html>
