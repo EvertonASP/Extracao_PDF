@@ -476,9 +476,11 @@
                     <tr>
                         <th>CNPJ</th>
                         <th>Razão Social</th>
-                        <th>Período de Apuração</th>
-                        <th>Data de Vencimento</th>
-                        <th>Número do Documento</th>
+                        <th>Período Início</th>
+                        <th>Período Fim</th>
+                        <th>Data Vencimento</th>
+                        <th>Data Arrecadação</th>
+                        <th>Nº Documento</th>
                         <th>Código</th>
                         <th>Descrição</th>
                         <th>Principal (R$)</th>
@@ -600,7 +602,7 @@
                     const progress = Math.round((processedCount / selectedFiles.length) * 100);
                     updateProgress(progress);
                     
-                    await sleep(500); // Simular processamento
+                    await sleep(500);
                     
                 } catch (error) {
                     console.error(`Erro ao processar ${file.name}:`, error);
@@ -622,7 +624,6 @@
         }
 
         async function extractDataFromPDF(file) {
-            // Usar PDF.js para ler o PDF real
             const arrayBuffer = await file.arrayBuffer();
             const text = await readPDFWithPDFJS(arrayBuffer);
             return parseDARFData(text, file.name);
@@ -630,7 +631,6 @@
 
         async function readPDFWithPDFJS(arrayBuffer) {
             try {
-                // Carregar PDF.js dinamicamente
                 if (typeof pdfjsLib === 'undefined') {
                     await loadPDFJS();
                 }
@@ -638,7 +638,6 @@
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 let fullText = '';
                 
-                // Extrair texto de todas as páginas
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
@@ -674,16 +673,19 @@
         function parseDARFData(text, fileName) {
             const data = [];
             console.log(`Processando arquivo: ${fileName}`);
-            console.log('Texto extraído:', text.substring(0, 500)); // Log para debug
+            console.log('Texto extraído:', text.substring(0, 500));
             
-            // Patterns mais robustos para DARF
-            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
-            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
+            // Padrões mais precisos baseados no formato real do DARF
+            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z][A-Z\s\-\/]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
+            
+            // Padrões para extrair campos específicos do cabeçalho
+            const periodoPattern = /Período\s+Apuração\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/i;
+            const dataVencimentoPattern = /Data\s+de\s+Vencimento\s*(\d{2}\/\d{2}\/\d{4})/i;
+            const dataArrecadacaoPattern = /Data\s+de\s+Arrecadação\s*(\d{2}\/\d{2}\/\d{4})/i;
+            const numeroDocumentoPattern = /(\d{2}\/\d{2}\/\d{4})\s+(\d{17})/g;
             
             // Extrair informações básicas
-            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
+            let cnpj = '', razaoSocial = '', periodoInicio = '', periodoFim = '', dataVencimento = '', dataArrecadacao = '';
             
             const cnpjMatch = text.match(cnpjPattern);
             if (cnpjMatch) {
@@ -691,37 +693,51 @@
                 razaoSocial = cnpjMatch[2].trim();
             }
             
+            // Extrair período de apuração (início e fim)
             const periodoMatch = text.match(periodoPattern);
             if (periodoMatch) {
-                periodo = periodoMatch[1];
+                periodoInicio = periodoMatch[1];
+                periodoFim = periodoMatch[2];
             }
             
-            const vencimentoMatch = text.match(vencimentoPattern);
+            // Extrair data de vencimento
+            const vencimentoMatch = text.match(dataVencimentoPattern);
             if (vencimentoMatch) {
-                vencimento = vencimentoMatch[1];
+                dataVencimento = vencimentoMatch[1];
             }
             
-            // Extrair documentos - pode haver vários
+            // Extrair data de arrecadação
+            const arrecadacaoMatch = text.match(dataArrecadacaoPattern);
+            if (arrecadacaoMatch) {
+                dataArrecadacao = arrecadacaoMatch[1];
+            }
+            
+            // Extrair documentos com suas respectivas datas
             const documentos = [];
-            const docMatches = text.matchAll(/Número\s+do\s+Documento[:\s]*(\d+)/gi);
+            const docMatches = text.matchAll(numeroDocumentoPattern);
             for (const match of docMatches) {
-                documentos.push(match[1]);
+                documentos.push({
+                    data: match[1],
+                    numero: match[2]
+                });
             }
             
-            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodo, vencimento, documentos });
+            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodoInicio, periodoFim, dataVencimento, dataArrecadacao, documentos });
             
-            // Patterns mais específicos para códigos e valores
+            // Padrões mais específicos para códigos e valores baseados no formato real do DARF
             const patterns = [
-                // Padrão principal: código descrição valor_principal - - valor_total
-                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/g,
+                // Padrão principal do DARF: código descrição total - - principal (formato mais comum)
+                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)ÀÁÂÃÉÊÍÔÕÚ]{10,}?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/g,
                 // Padrão alternativo: código descrição principal multa juros total
-                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g,
-                // Padrão para linhas com valores separados por espaços
-                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)]{10,}?)\s+([\d\.,]+)(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?/g
+                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)ÀÁÂÃÉÊÍÔÕÚ]{10,}?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g,
+                // Padrão específico para IRRF: código descrição - - - total
+                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)ÀÁÂÃÉÊÍÔÕÚ]{10,}?)\s+-\s+-\s+-\s+([\d\.,]+)/g
             ];
             
             let currentDocIndex = 0;
-            let currentDocument = documentos[0] || 'N/A';
+            let currentDocument = documentos.length > 0 ? documentos[0].numero : 'N/A';
+            let currentDataVencimento = dataVencimento;
+            let currentDataArrecadacao = dataArrecadacao;
             
             // Tentar cada padrão
             for (const pattern of patterns) {
@@ -729,23 +745,33 @@
                 
                 for (const match of matches) {
                     const codigo = match[1];
-                    const descricao = match[2].trim().replace(/\s+/g, ' ');
+                    let descricao = match[2].trim().replace(/\s+/g, ' ');
                     
-                    // Determinar valores baseado no número de grupos capturados
+                    // Limpar a descrição de caracteres especiais desnecessários
+                    descricao = descricao.replace(/[^\w\s\-\/\.\(\)ÀÁÂÃÉÊÍÔÕÚ]/g, '').trim();
+                    
+                    // Determinar valores baseado no padrão encontrado
                     let principal, multa, juros, total;
                     
-                    if (match.length === 5) {
-                        // Padrão: código descrição principal - - total
-                        principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
+                    if (match.length === 5 && match[3] !== '-' && match[4] !== '-') {
+                        // Padrão: código descrição valor1 - - valor2
+                        // No DARF real, geralmente valor1=total e valor2=principal
+                        total = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
+                        principal = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
                         multa = 0;
                         juros = 0;
-                        total = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
                     } else if (match.length === 7) {
                         // Padrão: código descrição principal multa juros total
                         principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
                         multa = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
                         juros = parseFloat(match[5].replace(/\./g, '').replace(',', '.'));
                         total = parseFloat(match[6].replace(/\./g, '').replace(',', '.'));
+                    } else if (match.length === 5 && match[4] !== '-') {
+                        // Padrão IRRF: código descrição - - - total
+                        total = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
+                        principal = total; // Para IRRF, principal = total
+                        multa = 0;
+                        juros = 0;
                     } else {
                         continue; // Pular se não conseguir determinar o padrão
                     }
@@ -755,334 +781,34 @@
                         continue;
                     }
                     
-                    // Verificar se mudou de documento baseado na posição no texto
+                    // Detectar mudança de documento através do contexto no texto
                     const matchPosition = match.index;
                     const textBeforeMatch = text.substring(0, matchPosition);
-                    const docOccurrences = (textBeforeMatch.match(/Número\s+do\s+Documento/gi) || []).length;
                     
-                    if (docOccurrences > currentDocIndex && documentos[docOccurrences - 1]) {
-                        currentDocIndex = docOccurrences - 1;
-                        currentDocument = documentos[currentDocIndex];
+                    // Contar quantos DARFs (Data de Vencimento) aparecem antes desta linha
+                    const darfOccurrences = (textBeforeMatch.match(/Data\s+de\s+Vencimento/gi) || []).length;
+                    
+                    if (darfOccurrences > currentDocIndex && documentos[darfOccurrences - 1]) {
+                        currentDocIndex = darfOccurrences - 1;
+                        currentDocument = documentos[currentDocIndex].numero;
+                        
+                        // Buscar data de vencimento e arrecadação específicas para este documento
+                        const docSection = text.substring(
+                            textBeforeMatch.lastIndexOf('Data de Vencimento'),
+                            matchPosition + 200
+                        );
+                        
+                        const vencMatch = docSection.match(/Data\s+de\s+Vencimento\s*(\d{2}\/\d{2}\/\d{4})/i);
+                        const arrecMatch = docSection.match(/Data\s+de\s+Arrecadação\s*(\d{2}\/\d{2}\/\d{4})/i);
+                        
+                        if (vencMatch) currentDataVencimento = vencMatch[1];
+                        if (arrecMatch) currentDataArrecadacao = arrecMatch[1];
                     }
                     
                     const record = {
                         arquivo: fileName,
                         cnpj: cnpj,
                         razaoSocial: razaoSocial,
-                        periodoApuracao: periodo,
-                        dataVencimento: vencimento,
-                        numeroDocumento: currentDocument,
-                        codigo: codigo,
-                        descricao: descricao,
-                        principal: principal,
-                        multa: multa || 0,
-                        juros: juros || 0,
-                        total: total
-                    };
-                    
-                    data.push(record);
-                }
-                
-                // Se encontrou dados, não precisa tentar outros padrões
-                if (data.length > 0) {
-                    break;
-                }
-            }
-            
-            console.log(`Extraídos ${data.length} registros do arquivo ${fileName}`);
-            
-            // Se não conseguiu extrair nada, tentar uma abordagem mais simples
-            if (data.length === 0) {
-                console.log('Tentando extração alternativa...');
-                
-                // Dividir texto em linhas e procurar por números que podem ser códigos
-                const lines = text.split(/[\n\r]+/).filter(line => line.trim());
-                
-                for (const line of lines) {
-                    // Procurar linhas que começam com 4 dígitos
-                    const simpleMatch = line.match(/^(\d{4})\s+(.+?)(\d{1,3}(?:\.\d{3})*,\d{2})/);
-                    if (simpleMatch) {
-                        const codigo = simpleMatch[1];
-                        const descricao = simpleMatch[2].trim();
-                        const valorStr = simpleMatch[3];
-                        const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-                        
-                        if (!isNaN(valor)) {
-                            data.push({
-                                arquivo: fileName,
-                                cnpj: cnpj || 'N/A',
-                                razaoSocial: razaoSocial || fileName.replace('.pdf', ''),
-                                periodoApuracao: periodo || 'N/A',
-                                dataVencimento: vencimento || 'N/A',
-                                numeroDocumento: currentDocument,
-                                codigo: codigo,
-                                descricao: descricao,
-                                principal: valor,
-                                multa: 0,
-                                juros: 0,
-                                total: valor
-                            });
-                        }
-                    }
-                }
-            }
-            
-            // Se ainda não conseguiu nada, criar um registro indicando que o arquivo foi processado mas sem dados
-            if (data.length === 0) {
-                console.warn(`Nenhum dado estruturado encontrado em ${fileName}`);
-                data.push({
-                    arquivo: fileName,
-                    cnpj: cnpj || 'Não identificado',
-                    razaoSocial: razaoSocial || 'Não identificado',
-                    periodoApuracao: periodo || 'Não identificado',
-                    dataVencimento: vencimento || 'Não identificado',
-                    numeroDocumento: 'Não identificado',
-                    codigo: '0000',
-                    descricao: 'ARQUIVO PROCESSADO - DADOS NÃO IDENTIFICADOS',
-                    principal: 0,
-                    multa: 0,
-                    juros: 0,
-                    total: 0
-                });
-            }
-            
-            return data;
-        }
-
-        function displayResults() {
-            displaySummary();
-            displayTable();
-            document.getElementById('resultsContainer').style.display = 'block';
-        }
-
-        function displaySummary() {
-            const companies = [...new Set(extractedData.map(item => item.cnpj))];
-            const totalValue = extractedData.reduce((sum, item) => sum + (item.total || 0), 0);
-            const totalTributes = extractedData.length;
-            const filesProcessed = selectedFiles.length;
-
-            const summaryGrid = document.getElementById('summaryGrid');
-            summaryGrid.innerHTML = `
-                <div class="summary-item">
-                    <span class="label">Arquivos Processados</span>
-                    <span class="value">${filesProcessed}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Empresas</span>
-                    <span class="value">${companies.length}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Total de Tributos</span>
-                    <span class="value">${totalTributes}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Valor Total</span>
-                    <span class="value">R$ ${totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                </div>
-            `;
-        }
-
-        function displayTable() {
-            const tbody = document.getElementById('darfTableBody');
-            tbody.innerHTML = '';
-
-            // Agrupar dados por arquivo para mostrar separadamente
-            const groupedByFile = {};
-            extractedData.forEach(item => {
-                if (!groupedByFile[item.arquivo]) {
-                    groupedByFile[item.arquivo] = [];
-                }
-                groupedByFile[item.arquivo].push(item);
-            });
-
-            // Exibir dados agrupados por arquivo
-            Object.keys(groupedByFile).forEach((fileName, fileIndex) => {
-                // Cabeçalho do arquivo
-                const headerRow = document.createElement('tr');
-                headerRow.className = 'file-header';
-                headerRow.style.backgroundColor = '#34495e';
-                headerRow.style.color = 'white';
-                headerRow.style.fontWeight = 'bold';
-                headerRow.innerHTML = `
-                    <td colspan="11" style="padding: 12px;">
-                        📄 ${fileName} (${groupedByFile[fileName].length} registro(s))
-                    </td>
-                `;
-                tbody.appendChild(headerRow);
-
-                let fileTotal = 0;
-
-                // Dados do arquivo
-                groupedByFile[fileName].forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.cnpj}</td>
-                        <td>${item.razaoSocial}</td>
-                        <td>${item.periodoApuracao}</td>
-                        <td>${item.dataVencimento}</td>
-                        <td>${item.numeroDocumento}</td>
-                        <td>${item.codigo}</td>
-                        <td>${item.descricao}</td>
-                        <td class="currency">R$ ${item.principal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.multa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.juros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    `;
-                    tbody.appendChild(row);
-                    fileTotal += item.total;
-                });
-
-                // Total do arquivo
-                const totalRow = document.createElement('tr');
-                totalRow.className = 'total-row';
-                totalRow.innerHTML = `
-                    <td colspan="7"><strong>SUBTOTAL - ${fileName}</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>R$ ${fileTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-                `;
-                tbody.appendChild(totalRow);
-
-                // Espaçador entre arquivos
-                if (fileIndex < Object.keys(groupedByFile).length - 1) {
-                    const spacerRow = document.createElement('tr');
-                    spacerRow.innerHTML = '<td colspan="11" style="height: 10px; border: none;"></td>';
-                    tbody.appendChild(spacerRow);
-                }
-            });
-
-            // Total geral
-            const grandTotal = extractedData.reduce((sum, item) => sum + (item.total || 0), 0);
-            const grandTotalRow = document.createElement('tr');
-            grandTotalRow.className = 'grand-total-row';
-            grandTotalRow.innerHTML = `
-                <td colspan="7"><strong>TOTAL GERAL</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>R$ ${grandTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-            `;
-            tbody.appendChild(grandTotalRow);
-
-            document.getElementById('darfTable').style.display = 'table';
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-
-        function showProgress(show) {
-            document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
-        }
-
-        function updateProgress(percent) {
-            const progressFill = document.getElementById('progressFill');
-            progressFill.style.width = percent + '%';
-            progressFill.textContent = percent + '%';
-        }
-
-        function updateCurrentFile(fileName) {
-            document.getElementById('currentFile').textContent = `Processando: ${fileName}`;
-        }
-
-        function showStatus(type, message) {
-            const status = document.getElementById('status');
-            status.className = `status ${type}`;
-            status.textContent = message;
-            status.style.display = 'block';
-            
-            setTimeout(() => {
-                status.style.display = 'none';
-            }, 5000);
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function exportToCSV() {
-            if (extractedData.length === 0) {
-                showStatus('error', 'Nenhum dado para exportar.');
-                return;
-            }
-
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
-            
-            let csv = [headers.map(h => `"${h}"`).join(',')];
-            
-            extractedData.forEach(item => {
-                const row = [
-                    `"${item.cnpj}"`,
-                    `"${item.razaoSocial}"`,
-                    `"${item.periodoApuracao}"`,
-                    `"${item.dataVencimento}"`,
-                    `"${item.numeroDocumento}"`,
-                    `"${item.codigo}"`,
-                    `"${item.descricao}"`,
-                    `"${item.principal.toFixed(2)}"`,
-                    `"${item.multa.toFixed(2)}"`,
-                    `"${item.juros.toFixed(2)}"`,
-                    `"${item.total.toFixed(2)}"`
-                ];
-                csv.push(row.join(','));
-            });
-            
-            const csvContent = csv.join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `darf_extracted_${new Date().toISOString().slice(0,10)}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showStatus('success', 'Arquivo CSV baixado com sucesso!');
-        }
-
-        function exportToExcel() {
-            if (extractedData.length === 0) {
-                showStatus('error', 'Nenhum dado para copiar.');
-                return;
-            }
-
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
-            
-            let copyData = headers.join('\t') + '\n';
-            
-            extractedData.forEach(item => {
-                const row = [
-                    item.cnpj,
-                    item.razaoSocial,
-                    item.periodoApuracao,
-                    item.dataVencimento,
-                    item.numeroDocumento,
-                    item.codigo,
-                    item.descricao,
-                    item.principal.toFixed(2),
-                    item.multa.toFixed(2),
-                    item.juros.toFixed(2),
-                    item.total.toFixed(2)
-                ];
-                copyData += row.join('\t') + '\n';
-            });
-            
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(copyData).then(() => {
-                    showStatus('success', 'Dados copiados! Cole no Excel usando Ctrl+V');
-                }).catch(() => {
-                    showStatus('error', 'Erro ao copiar. Tente novamente.');
-                });
-            } else {
-                showStatus('error', 'Função de cópia não suportada neste navegador.');
-            }
-        }
-
-        // Inicialização
-        updateFileList();
-    </script>
-</body>
-</html>
+                        periodoApuracaoInicio: periodoInicio,
+                        periodoApuracaoFim: periodoFim,
+                        data
