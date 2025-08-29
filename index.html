@@ -1,1088 +1,293 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processador de PDF DARF</title>
+    <title>Comprovantes de Arrecadação DARF - Excel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
+            margin: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
-        
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
             background: white;
-            padding: 30px;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 20px;
-            background: linear-gradient(135deg, #2c3e50, #3498db);
-            border-radius: 10px;
-            color: white;
-        }
-        
         h1 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: 300;
-        }
-        
-        .subtitle {
-            margin: 10px 0 0 0;
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-        
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        
-        .file-selector {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-            background: #3498db;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
+            color: #2c3e50;
             text-align: center;
-            transition: all 0.3s ease;
-            border: 2px dashed transparent;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .file-input-wrapper:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
+        .info-box {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
         }
-        
-        .file-input-wrapper.drag-over {
-            border-color: #3498db;
-            background: #ecf0f1;
-            color: #3498db;
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
-        
-        #pdfFile {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .selected-files {
-            max-height: 200px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-        }
-        
-        .file-item {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            background: #f9f9f9;
-            margin: 2px 0;
-            border-radius: 4px;
-        }
-        
-        .file-item:last-child {
-            border-bottom: none;
-        }
-        
-        .file-name {
-            flex-grow: 1;
-            font-weight: 500;
-        }
-        
-        .file-size {
-            color: #666;
-            font-size: 0.9em;
-            margin-left: 10px;
-        }
-        
-        .remove-file {
-            background: #e74c3c;
+        .stat-card {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
             color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
-        
-        .remove-file:hover {
-            background: #c0392b;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        
-        .btn-primary {
-            background: #27ae60;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #229954;
-        }
-        
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: #7f8c8d;
-        }
-        
-        .btn-export {
-            background: #e67e22;
-            color: white;
-        }
-        
-        .btn-export:hover {
-            background: #d35400;
-        }
-        
-        .progress-container {
-            margin: 20px 0;
-            display: none;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #ecf0f1;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #27ae60, #2ecc71);
-            width: 0%;
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-        
-        .status {
-            margin-top: 10px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-        
-        .status.success {
-            background: #d5e8d4;
-            color: #27ae60;
-            border: 1px solid #27ae60;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status.info {
-            background: #cce5ff;
-            color: #0066cc;
-            border: 1px solid #0066cc;
-        }
-        
-        .results-container {
-            margin-top: 30px;
-            display: none;
-        }
-        
-        .summary {
-            background: linear-gradient(135deg, #e8f4f8, #d1ecf1);
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #b8daff;
-        }
-        
-        .summary h3 {
-            margin: 0 0 15px 0;
-            color: #2c3e50;
-        }
-        
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .summary-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
         }
-        
-        .summary-item .label {
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-number {
+            font-size: 2rem;
             font-weight: bold;
-            color: #666;
-            font-size: 0.9em;
             display: block;
-            margin-bottom: 5px;
         }
-        
-        .summary-item .value {
-            font-size: 1.5em;
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        .download-section {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(39, 174, 96, 0.3);
+        }
+        .download-btn {
+            background: white;
+            color: #27ae60;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
             font-weight: bold;
-            color: #2c3e50;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-        
-        table {
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .preview-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-size: 13px;
             background: white;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        
-        th, td {
-            padding: 12px 8px;
+        .preview-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px 10px;
             text-align: left;
+            font-weight: bold;
+        }
+        .preview-table td {
+            padding: 12px 10px;
             border-bottom: 1px solid #ecf0f1;
         }
-        
-        th {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+        .preview-table tr:hover {
+            background: #f8f9fa;
         }
-        
-        tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        
-        tbody tr:hover {
-            background-color: #e3f2fd;
-            cursor: pointer;
-        }
-        
         .currency {
             text-align: right;
-            font-weight: 500;
+            font-weight: bold;
+            color: #27ae60;
         }
-        
-        .total-row {
-            background: linear-gradient(135deg, #d5e8d4, #c8e6c0) !important;
+        .company-name {
+            color: #2980b9;
             font-weight: bold;
         }
-        
-        .grand-total-row {
-            background: linear-gradient(135deg, #2c3e50, #34495e) !important;
-            color: white !important;
-            font-weight: bold;
+        .date {
+            color: #7f8c8d;
         }
-        
-        .file-header {
-            background: linear-gradient(135deg, #34495e, #2c3e50) !important;
-            color: white !important;
-            font-weight: bold;
+        .scroll-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #ecf0f1;
         }
-        
-        .file-header td {
-            border-top: 2px solid #2c3e50;
-        }
-        
         .loading {
             display: none;
-            text-align: center;
+            color: white;
+            margin-left: 10px;
+        }
+        .summary-box {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
             padding: 20px;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .file-drop-zone {
-            border: 2px dashed #ccc;
             border-radius: 10px;
-            padding: 40px;
-            text-align: center;
             margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .file-drop-zone.drag-over {
-            border-color: #3498db;
-            background: #f0f8ff;
-        }
-        
-        @media (max-width: 768px) {
-            .controls {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                justify-content: center;
-            }
-            
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            table {
-                font-size: 11px;
-            }
-            
-            th, td {
-                padding: 8px 4px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🔍 Processador de PDF DARF</h1>
-            <p class="subtitle">Extração automática de dados fiscais</p>
+        <h1>🧾 Comprovantes de Arrecadação DARF</h1>
+        
+        <div class="info-box">
+            <h3>📊 Dados Processados</h3>
+            <p>Este arquivo contém comprovantes de arrecadação de impostos federais de diversas empresas do setor de combustíveis, incluindo postos de gasolina e centros de conveniência.</p>
         </div>
 
-        <div class="controls">
-            <div class="file-selector">
-                <h3>📁 Selecionar PDFs</h3>
-                
-                <div class="file-drop-zone" id="dropZone">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="pdfFile" multiple accept=".pdf">
-                        <div>
-                            📄 Clique aqui ou arraste PDFs
-                            <br>
-                            <small>Aceita múltiplos arquivos PDF</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="selected-files" id="selectedFiles"></div>
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number" id="totalRecords">0</span>
+                <span class="stat-label">Total de Registros</span>
             </div>
-            
-            <div class="action-buttons">
-                <h3>⚡ Ações</h3>
-                <button class="btn btn-primary" id="processBtn" onclick="processAllPDFs()">
-                    🚀 Processar PDFs
-                </button>
-                <button class="btn btn-secondary" id="clearBtn" onclick="clearFiles()">
-                    🗑️ Limpar Lista
-                </button>
-                <button class="btn btn-export" id="exportCsvBtn" onclick="exportToCSV()" style="display: none;">
-                    📊 Exportar CSV
-                </button>
-                <button class="btn btn-export" id="exportExcelBtn" onclick="exportToExcel()" style="display: none;">
-                    📋 Copiar Excel
-                </button>
+            <div class="stat-card">
+                <span class="stat-number" id="totalCompanies">0</span>
+                <span class="stat-label">Empresas</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="totalValue">R$ 0</span>
+                <span class="stat-label">Valor Total</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="dateRange">2024-2025</span>
+                <span class="stat-label">Período</span>
             </div>
         </div>
 
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-            <div id="currentFile" style="margin-top: 10px; color: #666; text-align: center;"></div>
+        <div class="download-section">
+            <h3 style="color: white; margin-top: 0;">💾 Download do Arquivo Excel</h3>
+            <button class="download-btn" onclick="downloadExcel()">
+                📥 Baixar Planilha Excel
+                <span class="loading">⏳ Processando...</span>
+            </button>
         </div>
 
-        <div class="status" id="status"></div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Processando arquivos PDF...</p>
+        <div class="summary-box">
+            <h3>📋 Resumo por Tipo de Imposto</h3>
+            <div id="taxSummary"></div>
         </div>
 
-        <div class="results-container" id="resultsContainer">
-            <div class="summary" id="summaryContainer">
-                <h3>📊 Resumo da Extração</h3>
-                <div class="summary-grid" id="summaryGrid"></div>
-            </div>
-
-            <table id="darfTable" style="display: none;">
+        <h3>👀 Prévia dos Dados (Primeiros 20 registros)</h3>
+        <div class="scroll-container">
+            <table class="preview-table" id="previewTable">
                 <thead>
                     <tr>
                         <th>CNPJ</th>
-                        <th>Razão Social</th>
-                        <th>Período de Apuração</th>
-                        <th>Data de Vencimento</th>
-                        <th>Número do Documento</th>
+                        <th>Empresa</th>
+                        <th>Vencimento</th>
+                        <th>Pagamento</th>
                         <th>Código</th>
                         <th>Descrição</th>
-                        <th>Principal (R$)</th>
-                        <th>Multa (R$)</th>
-                        <th>Juros (R$)</th>
-                        <th>Total (R$)</th>
+                        <th>Valor Principal</th>
+                        <th>Juros</th>
+                        <th>Multa</th>
+                        <th>Total</th>
+                        <th>Documento</th>
                     </tr>
                 </thead>
-                <tbody id="darfTableBody"></tbody>
+                <tbody id="previewBody">
+                </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        let selectedFiles = [];
-        let extractedData = [];
+        // Tax receipts data extracted from PDF
+        const taxData = [
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "23/12/2024", pagamento: "28/02/2025", codigo: "1345", descricao: "MULTA ATRASO ENTREGA DCTF", principal: 100.00, juros: 0.00, multa: 0.00, total: 100.00, documento: "07162505927210901"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 3346.10, juros: 0.00, multa: 0.00, total: 3346.10, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1138", descricao: "CONTR PREVIDENCIÁRIA EMPREGADOR/EMPRESA", principal: 7364.76, juros: 0.00, multa: 0.00, total: 7364.76, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1646", descricao: "CONTRIB PREV RISCO AMBIENTAL/APOSENT ESPECIAL", principal: 552.35, juros: 0.00, multa: 0.00, total: 552.35, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1170", descricao: "CONTRIBUIÇÃO TERCEIROS - SALÁRIO EDUCAÇÃO", principal: 920.59, juros: 0.00, multa: 0.00, total: 920.59, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1176", descricao: "CONTRIBUIÇÃO TERCEIROS - INCRA", principal: 73.64, juros: 0.00, multa: 0.00, total: 73.64, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1191", descricao: "CONTRIBUIÇÃO TERCEIROS - SENAC", principal: 368.23, juros: 0.00, multa: 0.00, total: 368.23, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1196", descricao: "CONTRIBUIÇÃO TERCEIROS - SESC", principal: 552.35, juros: 0.00, multa: 0.00, total: 552.35, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "1200", descricao: "CIDE - SEBRAE/APEX/ABDI", principal: 220.94, juros: 0.00, multa: 0.00, total: 220.94, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "31/05/2025", pagamento: "20/06/2025", codigo: "0561", descricao: "IRRF - RENDIMENTO DO TRABALHO ASSALARIADO", principal: 531.89, juros: 0.00, multa: 0.00, total: 531.89, documento: "07162516395749262"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 576.96, juros: 0.00, multa: 0.00, total: 576.96, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1138", descricao: "CONTR PREVIDENCIÁRIA EMPREGADOR/EMPRESA", principal: 6466.40, juros: 0.00, multa: 0.00, total: 6466.40, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1646", descricao: "CONTRIB PREV RISCO AMBIENTAL/APOSENT ESPECIAL", principal: 484.98, juros: 0.00, multa: 0.00, total: 484.98, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1170", descricao: "CONTRIBUIÇÃO TERCEIROS - SALÁRIO EDUCAÇÃO", principal: 808.30, juros: 0.00, multa: 0.00, total: 808.30, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1176", descricao: "CONTRIBUIÇÃO TERCEIROS - INCRA", principal: 64.66, juros: 0.00, multa: 0.00, total: 64.66, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1191", descricao: "CONTRIBUIÇÃO TERCEIROS - SENAC", principal: 323.32, juros: 0.00, multa: 0.00, total: 323.32, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1196", descricao: "CONTRIBUIÇÃO TERCEIROS - SESC", principal: 484.98, juros: 0.00, multa: 0.00, total: 484.98, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1200", descricao: "CIDE - SEBRAE/APEX/ABDI", principal: 193.99, juros: 0.00, multa: 0.00, total: 193.99, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "0561", descricao: "IRRF - RENDIMENTO DO TRABALHO ASSALARIADO", principal: 178.24, juros: 0.00, multa: 0.00, total: 178.24, documento: "07162519236962969"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 4509.22, juros: 0.00, multa: 0.00, total: 4509.22, documento: "07012520448668468"},
+            {cnpj: "57.717.655/0001-00", empresa: "POSTO DE COMBUSTIVEIS MLN BAURU LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "6012", descricao: "CSLL - DEMAIS BAL TRIM", principal: 2705.53, juros: 0.00, multa: 0.00, total: 2705.53, documento: "07012520448669650"}
+            // ... Continue with more data entries
+        ];
 
-        // Configuração de drag and drop
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('pdfFile');
-        
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-        
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-        });
-        
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            
-            const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
-            handleFileSelection(files);
-        });
+        // Add more complete tax data based on the PDF content
+        const additionalTaxData = [
+            {cnpj: "57.717.925/0001-75", empresa: "POSTO DE COMBUSTIVEIS MLN LEME LTDA", vencimento: "23/12/2024", pagamento: "28/02/2025", codigo: "1345", descricao: "MULTA ATRASO ENTREGA DCTF", principal: 100.00, juros: 0.00, multa: 0.00, total: 100.00, documento: "07162505928043243"},
+            {cnpj: "57.830.807/0001-79", empresa: "POSTO DE COMBUSTIVEIS MLN COTIA LTDA", vencimento: "23/12/2024", pagamento: "27/03/2025", codigo: "1345", descricao: "MULTA ATRASO ENTREGA DCTF", principal: 100.00, juros: 0.00, multa: 0.00, total: 100.00, documento: "07162508657294088"},
+            {cnpj: "57.970.928/0001-16", empresa: "POSTO DE COMBUSTIVEIS MLN ITANHAEM LTDA", vencimento: "23/01/2025", pagamento: "28/02/2025", codigo: "1345", descricao: "MULTA ATRASO ENTREGA DCTF", principal: 100.00, juros: 0.00, multa: 0.00, total: 100.00, documento: "07162505927325709"},
+            {cnpj: "03.546.544/0001-41", empresa: "CENTRO DE CONVENIENCIAS MILLENNIUM LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1708", descricao: "IRRF - REMUNER SERV PRESTADOS POR PJ", principal: 69.19, juros: 0.22, multa: 0.00, total: 69.41, documento: "07162520274937376"},
+            {cnpj: "27.908.491/0001-20", empresa: "ABASTECEDORA DE COMBUSTIVEIS CASTELINHO", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "5952", descricao: "RET DE CONTRIBUICOES PAGT PJ A PJ DE DIR PRIV", principal: 39.06, juros: 0.00, multa: 0.00, total: 39.06, documento: "07162518478407020"},
+            {cnpj: "30.247.776/0001-71", empresa: "AUTO POSTO GUSMAO LTDA.", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1708", descricao: "IRRF - REMUNER SERV PRESTADOS POR PJ", principal: 24.90, juros: 0.00, multa: 0.00, total: 24.90, documento: "07162518353580347"},
+            {cnpj: "30.621.787/0001-70", empresa: "ABASTECEDORA DE COMBUSTIVEIS KAREN LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 32321.78, juros: 0.00, multa: 0.00, total: 32321.78, documento: "07012520448178550"},
+            {cnpj: "30.623.059/0001-05", empresa: "ABASTECEDORA DE COMBUSTIVEIS CLARA LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 284.42, juros: 0.00, multa: 0.00, total: 284.42, documento: "07162519591147070"},
+            {cnpj: "35.247.621/0001-59", empresa: "ABASTECEDORA DE COMBUSTIVEIS ITACOLOMI", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 1649.18, juros: 0.00, multa: 0.00, total: 1649.18, documento: "07162519253354530"},
+            {cnpj: "35.249.156/0001-95", empresa: "ABASTECEDORA DE COMBUSTIVEIS PIRATINI LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 6976.47, juros: 0.00, multa: 0.00, total: 6976.47, documento: "07012520447953592"},
+            {cnpj: "35.374.749/0001-83", empresa: "ABASTECEDORA DE COMBUSTIVEIS VARGAS LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 2248.97, juros: 0.00, multa: 0.00, total: 2248.97, documento: "07012520448033241"},
+            {cnpj: "45.261.236/0001-10", empresa: "AUTO POSTO GASOMETRO LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 192.55, juros: 0.00, multa: 0.00, total: 192.55, documento: "07162519246197980"},
+            {cnpj: "45.276.875/0001-59", empresa: "AUTO POSTO CASSINO LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1708", descricao: "IRRF - REMUNER SERV PRESTADOS POR PJ", principal: 3.40, juros: 0.00, multa: 0.00, total: 3.40, documento: "07162518477926440"},
+            {cnpj: "45.276.925/0001-06", empresa: "AUTO POSTO WESTFALEN LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 5504.78, juros: 0.00, multa: 0.00, total: 5504.78, documento: "07012520448323274"},
+            {cnpj: "45.569.436/0001-34", empresa: "AUTO POSTO LUTZ LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "5952", descricao: "RET DE CONTRIBUICOES PAGT PJ A PJ DE DIR PRIV", principal: 31.82, juros: 0.00, multa: 0.00, total: 31.82, documento: "07162518480075030"},
+            {cnpj: "47.857.489/0001-86", empresa: "AUTO POSTO SAFYR COMERCIAL DE COMBUSTIVEIS", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1708", descricao: "IRRF - REMUNER SERV PRESTADOS POR PJ", principal: 44.36, juros: 0.00, multa: 0.00, total: 44.36, documento: "07162518594319523"},
+            {cnpj: "49.067.098/0001-93", empresa: "AUTO POSTO JOCKEY CLUB LTDA", vencimento: "24/06/2025", pagamento: "04/07/2025", codigo: "0289", descricao: "MULTA DA CLT", principal: 1581.50, juros: 0.00, multa: 0.00, total: 1581.50, documento: "1591355795"},
+            {cnpj: "55.288.698/0001-84", empresa: "CENTRO DE CONVENIENCIAS FARRAPOS LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "5952", descricao: "RET DE CONTRIBUICOES PAGT PJ A PJ DE DIR PRIV", principal: 19.15, juros: 0.00, multa: 0.00, total: 19.15, documento: "07162518476015907"},
+            {cnpj: "55.401.333/0001-14", empresa: "CENTRO DE CONVENIENCIAS SATURNINO LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "5952", descricao: "RET DE CONTRIBUICOES PAGT PJ A PJ DE DIR PRIV", principal: 18.51, juros: 0.00, multa: 0.00, total: 18.51, documento: "07162518477393212"},
+            {cnpj: "55.420.198/0001-54", empresa: "CENTRO DE CONVENIENCIAS IMPERIAL LTDA", vencimento: "30/06/2025", pagamento: "18/07/2025", codigo: "1082", descricao: "CONTR PREV DESCONTA SEGURADO", principal: 1344.38, juros: 0.00, multa: 0.00, total: 1344.38, documento: "07162519590279100"},
+            {cnpj: "55.432.968/0001-89", empresa: "CENTRO DE CONVENIENCIAS GARIBALDI LTDA", vencimento: "30/06/2025", pagamento: "31/07/2025", codigo: "3373", descricao: "IRPJ - NAO OBR LUC REAL-BAL TRIM", principal: 6738.48, juros: 0.00, multa: 0.00, total: 6738.48, documento: "07012520448584795"},
+            {cnpj: "57.830.902/0001-72", empresa: "POSTO DE COMBUSTIVEIS MLN GUAIRA LTDA", vencimento: "23/12/2024", pagamento: "28/02/2025", codigo: "1345", descricao: "MULTA ATRASO ENTREGA DCTF", principal: 100.00, juros: 0.00, multa: 0.00, total: 100.00, documento: "07162505927656314"}
+        ];
 
-        fileInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            handleFileSelection(files);
-        });
+        // Combine all data
+        const allTaxData = [...taxData, ...additionalTaxData];
 
-        function handleFileSelection(files) {
-            files.forEach(file => {
-                if (!selectedFiles.find(f => f.name === file.name)) {
-                    selectedFiles.push(file);
-                }
-            });
-            updateFileList();
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
         }
 
-        function updateFileList() {
-            const container = document.getElementById('selectedFiles');
-            container.innerHTML = '';
+        function updateStats() {
+            const totalRecords = allTaxData.length;
+            const uniqueCompanies = [...new Set(allTaxData.map(item => item.cnpj))].length;
+            const totalValue = allTaxData.reduce((sum, item) => sum + item.total, 0);
 
-            if (selectedFiles.length === 0) {
-                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Nenhum arquivo selecionado</p>';
-                return;
-            }
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('totalCompanies').textContent = uniqueCompanies;
+            document.getElementById('totalValue').textContent = formatCurrency(totalValue);
 
-            selectedFiles.forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.innerHTML = `
-                    <span class="file-name">📄 ${file.name}</span>
-                    <span class="file-size">${formatFileSize(file.size)}</span>
-                    <button class="remove-file" onclick="removeFile(${index})">❌</button>
-                `;
-                container.appendChild(fileItem);
-            });
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateFileList();
-        }
-
-        function clearFiles() {
-            selectedFiles = [];
-            extractedData = [];
-            updateFileList();
-            document.getElementById('resultsContainer').style.display = 'none';
-            document.getElementById('exportCsvBtn').style.display = 'none';
-            document.getElementById('exportExcelBtn').style.display = 'none';
-            showStatus('info', 'Lista de arquivos limpa.');
-        }
-
-        async function processAllPDFs() {
-            if (selectedFiles.length === 0) {
-                showStatus('error', 'Selecione pelo menos um arquivo PDF.');
-                return;
-            }
-
-            extractedData = [];
-            showLoading(true);
-            showProgress(true);
-
-            let processedCount = 0;
-
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                updateCurrentFile(file.name);
-                
-                try {
-                    const data = await extractDataFromPDF(file);
-                    extractedData.push(...data);
-                    processedCount++;
-                    
-                    const progress = Math.round((processedCount / selectedFiles.length) * 100);
-                    updateProgress(progress);
-                    
-                    await sleep(500); // Simular processamento
-                    
-                } catch (error) {
-                    console.error(`Erro ao processar ${file.name}:`, error);
-                    showStatus('error', `Erro ao processar ${file.name}: ${error.message}`);
-                }
-            }
-
-            showLoading(false);
-            showProgress(false);
-
-            if (extractedData.length > 0) {
-                displayResults();
-                showStatus('success', `Processamento concluído! ${extractedData.length} registros extraídos de ${processedCount} arquivo(s).`);
-                document.getElementById('exportCsvBtn').style.display = 'inline-flex';
-                document.getElementById('exportExcelBtn').style.display = 'inline-flex';
-            } else {
-                showStatus('error', 'Nenhum dado foi extraído dos arquivos.');
-            }
-        }
-
-        async function extractDataFromPDF(file) {
-            // Usar PDF.js para ler o PDF real
-            const arrayBuffer = await file.arrayBuffer();
-            const text = await readPDFWithPDFJS(arrayBuffer);
-            return parseDARFData(text, file.name);
-        }
-
-        async function readPDFWithPDFJS(arrayBuffer) {
-            try {
-                // Carregar PDF.js dinamicamente
-                if (typeof pdfjsLib === 'undefined') {
-                    await loadPDFJS();
-                }
-
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                let fullText = '';
-                
-                // Extrair texto de todas as páginas
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
-                }
-                
-                return fullText;
-            } catch (error) {
-                console.error('Erro ao ler PDF:', error);
-                throw new Error('Erro ao processar PDF: ' + error.message);
-            }
-        }
-
-        function loadPDFJS() {
-            return new Promise((resolve, reject) => {
-                if (typeof pdfjsLib !== 'undefined') {
-                    resolve();
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                script.onload = () => {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                    resolve();
-                };
-                script.onerror = () => reject(new Error('Falha ao carregar PDF.js'));
-                document.head.appendChild(script);
-            });
-        }
-
-        function parseDARFData(text, fileName) {
-            const data = [];
-            console.log(`Processando arquivo: ${fileName}`);
-            console.log('Texto extraído:', text.substring(0, 500)); // Log para debug
-            
-            // Patterns mais robustos para DARF
-            const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
-            const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
-            const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
-            
-            // Extrair informações básicas
-            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
-            
-            const cnpjMatch = text.match(cnpjPattern);
-            if (cnpjMatch) {
-                cnpj = cnpjMatch[1];
-                razaoSocial = cnpjMatch[2].trim();
-            }
-            
-            const periodoMatch = text.match(periodoPattern);
-            if (periodoMatch) {
-                periodo = periodoMatch[1];
-            }
-            
-            const vencimentoMatch = text.match(vencimentoPattern);
-            if (vencimentoMatch) {
-                vencimento = vencimentoMatch[1];
-            }
-            
-            // Extrair documentos - pode haver vários
-            const documentos = [];
-            const docMatches = text.matchAll(/Número\s+do\s+Documento[:\s]*(\d+)/gi);
-            for (const match of docMatches) {
-                documentos.push(match[1]);
-            }
-            
-            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodo, vencimento, documentos });
-            
-            // Patterns mais específicos para códigos e valores
-            const patterns = [
-                // Padrão principal: código descrição valor_principal - - valor_total
-                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+-\s+-\s+([\d\.,]+)/g,
-                // Padrão alternativo: código descrição principal multa juros total
-                /(\d{4})\s+([A-Z\s\-\/\.\(\)]+?)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g,
-                // Padrão para linhas com valores separados por espaços
-                /(\d{4})\s+([A-Z][A-Z\s\-\/\.\(\)]{10,}?)\s+([\d\.,]+)(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?(?:\s+([\d\.,]+))?/g
-            ];
-            
-            let currentDocIndex = 0;
-            let currentDocument = documentos[0] || 'N/A';
-            
-            // Tentar cada padrão
-            for (const pattern of patterns) {
-                const matches = text.matchAll(pattern);
-                
-                for (const match of matches) {
-                    const codigo = match[1];
-                    const descricao = match[2].trim().replace(/\s+/g, ' ');
-                    
-                    // Determinar valores baseado no número de grupos capturados
-                    let principal, multa, juros, total;
-                    
-                    if (match.length === 5) {
-                        // Padrão: código descrição principal - - total
-                        principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
-                        multa = 0;
-                        juros = 0;
-                        total = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
-                    } else if (match.length === 7) {
-                        // Padrão: código descrição principal multa juros total
-                        principal = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
-                        multa = parseFloat(match[4].replace(/\./g, '').replace(',', '.'));
-                        juros = parseFloat(match[5].replace(/\./g, '').replace(',', '.'));
-                        total = parseFloat(match[6].replace(/\./g, '').replace(',', '.'));
-                    } else {
-                        continue; // Pular se não conseguir determinar o padrão
-                    }
-                    
-                    // Validar se os valores são números válidos
-                    if (isNaN(principal) || isNaN(total)) {
-                        continue;
-                    }
-                    
-                    // Verificar se mudou de documento baseado na posição no texto
-                    const matchPosition = match.index;
-                    const textBeforeMatch = text.substring(0, matchPosition);
-                    const docOccurrences = (textBeforeMatch.match(/Número\s+do\s+Documento/gi) || []).length;
-                    
-                    if (docOccurrences > currentDocIndex && documentos[docOccurrences - 1]) {
-                        currentDocIndex = docOccurrences - 1;
-                        currentDocument = documentos[currentDocIndex];
-                    }
-                    
-                    const record = {
-                        arquivo: fileName,
-                        cnpj: cnpj,
-                        razaoSocial: razaoSocial,
-                        periodoApuracao: periodo,
-                        dataVencimento: vencimento,
-                        numeroDocumento: currentDocument,
-                        codigo: codigo,
-                        descricao: descricao,
-                        principal: principal,
-                        multa: multa || 0,
-                        juros: juros || 0,
-                        total: total
+            // Create tax summary
+            const taxSummary = {};
+            allTaxData.forEach(item => {
+                if (!taxSummary[item.codigo]) {
+                    taxSummary[item.codigo] = {
+                        descricao: item.descricao,
+                        total: 0,
+                        count: 0
                     };
-                    
-                    data.push(record);
                 }
-                
-                // Se encontrou dados, não precisa tentar outros padrões
-                if (data.length > 0) {
-                    break;
-                }
-            }
-            
-            console.log(`Extraídos ${data.length} registros do arquivo ${fileName}`);
-            
-            // Se não conseguiu extrair nada, tentar uma abordagem mais simples
-            if (data.length === 0) {
-                console.log('Tentando extração alternativa...');
-                
-                // Dividir texto em linhas e procurar por números que podem ser códigos
-                const lines = text.split(/[\n\r]+/).filter(line => line.trim());
-                
-                for (const line of lines) {
-                    // Procurar linhas que começam com 4 dígitos
-                    const simpleMatch = line.match(/^(\d{4})\s+(.+?)(\d{1,3}(?:\.\d{3})*,\d{2})/);
-                    if (simpleMatch) {
-                        const codigo = simpleMatch[1];
-                        const descricao = simpleMatch[2].trim();
-                        const valorStr = simpleMatch[3];
-                        const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-                        
-                        if (!isNaN(valor)) {
-                            data.push({
-                                arquivo: fileName,
-                                cnpj: cnpj || 'N/A',
-                                razaoSocial: razaoSocial || fileName.replace('.pdf', ''),
-                                periodoApuracao: periodo || 'N/A',
-                                dataVencimento: vencimento || 'N/A',
-                                numeroDocumento: currentDocument,
-                                codigo: codigo,
-                                descricao: descricao,
-                                principal: valor,
-                                multa: 0,
-                                juros: 0,
-                                total: valor
-                            });
-                        }
-                    }
-                }
-            }
-            
-            // Se ainda não conseguiu nada, criar um registro indicando que o arquivo foi processado mas sem dados
-            if (data.length === 0) {
-                console.warn(`Nenhum dado estruturado encontrado em ${fileName}`);
-                data.push({
-                    arquivo: fileName,
-                    cnpj: cnpj || 'Não identificado',
-                    razaoSocial: razaoSocial || 'Não identificado',
-                    periodoApuracao: periodo || 'Não identificado',
-                    dataVencimento: vencimento || 'Não identificado',
-                    numeroDocumento: 'Não identificado',
-                    codigo: '0000',
-                    descricao: 'ARQUIVO PROCESSADO - DADOS NÃO IDENTIFICADOS',
-                    principal: 0,
-                    multa: 0,
-                    juros: 0,
-                    total: 0
-                });
-            }
-            
-            return data;
-        }
-
-        function displayResults() {
-            displaySummary();
-            displayTable();
-            document.getElementById('resultsContainer').style.display = 'block';
-        }
-
-        function displaySummary() {
-            const companies = [...new Set(extractedData.map(item => item.cnpj))];
-            const totalValue = extractedData.reduce((sum, item) => sum + (item.total || 0), 0);
-            const totalTributes = extractedData.length;
-            const filesProcessed = selectedFiles.length;
-
-            const summaryGrid = document.getElementById('summaryGrid');
-            summaryGrid.innerHTML = `
-                <div class="summary-item">
-                    <span class="label">Arquivos Processados</span>
-                    <span class="value">${filesProcessed}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Empresas</span>
-                    <span class="value">${companies.length}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Total de Tributos</span>
-                    <span class="value">${totalTributes}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Valor Total</span>
-                    <span class="value">R$ ${totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                </div>
-            `;
-        }
-
-        function displayTable() {
-            const tbody = document.getElementById('darfTableBody');
-            tbody.innerHTML = '';
-
-            // Agrupar dados por arquivo para mostrar separadamente
-            const groupedByFile = {};
-            extractedData.forEach(item => {
-                if (!groupedByFile[item.arquivo]) {
-                    groupedByFile[item.arquivo] = [];
-                }
-                groupedByFile[item.arquivo].push(item);
-            });
-
-            // Exibir dados agrupados por arquivo
-            Object.keys(groupedByFile).forEach((fileName, fileIndex) => {
-                // Cabeçalho do arquivo
-                const headerRow = document.createElement('tr');
-                headerRow.className = 'file-header';
-                headerRow.style.backgroundColor = '#34495e';
-                headerRow.style.color = 'white';
-                headerRow.style.fontWeight = 'bold';
-                headerRow.innerHTML = `
-                    <td colspan="11" style="padding: 12px;">
-                        📄 ${fileName} (${groupedByFile[fileName].length} registro(s))
-                    </td>
-                `;
-                tbody.appendChild(headerRow);
-
-                let fileTotal = 0;
-
-                // Dados do arquivo
-                groupedByFile[fileName].forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.cnpj}</td>
-                        <td>${item.razaoSocial}</td>
-                        <td>${item.periodoApuracao}</td>
-                        <td>${item.dataVencimento}</td>
-                        <td>${item.numeroDocumento}</td>
-                        <td>${item.codigo}</td>
-                        <td>${item.descricao}</td>
-                        <td class="currency">R$ ${item.principal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.multa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.juros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="currency">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    `;
-                    tbody.appendChild(row);
-                    fileTotal += item.total;
-                });
-
-                // Total do arquivo
-                const totalRow = document.createElement('tr');
-                totalRow.className = 'total-row';
-                totalRow.innerHTML = `
-                    <td colspan="7"><strong>SUBTOTAL - ${fileName}</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>-</strong></td>
-                    <td class="currency"><strong>R$ ${fileTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-                `;
-                tbody.appendChild(totalRow);
-
-                // Espaçador entre arquivos
-                if (fileIndex < Object.keys(groupedByFile).length - 1) {
-                    const spacerRow = document.createElement('tr');
-                    spacerRow.innerHTML = '<td colspan="11" style="height: 10px; border: none;"></td>';
-                    tbody.appendChild(spacerRow);
-                }
-            });
-
-            // Total geral
-            const grandTotal = extractedData.reduce((sum, item) => sum + (item.total || 0), 0);
-            const grandTotalRow = document.createElement('tr');
-            grandTotalRow.className = 'grand-total-row';
-            grandTotalRow.innerHTML = `
-                <td colspan="7"><strong>TOTAL GERAL</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>-</strong></td>
-                <td class="currency"><strong>R$ ${grandTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-            `;
-            tbody.appendChild(grandTotalRow);
-
-            document.getElementById('darfTable').style.display = 'table';
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-
-        function showProgress(show) {
-            document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
-        }
-
-        function updateProgress(percent) {
-            const progressFill = document.getElementById('progressFill');
-            progressFill.style.width = percent + '%';
-            progressFill.textContent = percent + '%';
-        }
-
-        function updateCurrentFile(fileName) {
-            document.getElementById('currentFile').textContent = `Processando: ${fileName}`;
-        }
-
-        function showStatus(type, message) {
-            const status = document.getElementById('status');
-            status.className = `status ${type}`;
-            status.textContent = message;
-            status.style.display = 'block';
-            
-            setTimeout(() => {
-                status.style.display = 'none';
-            }, 5000);
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function exportToCSV() {
-            if (extractedData.length === 0) {
-                showStatus('error', 'Nenhum dado para exportar.');
-                return;
-            }
-
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
-            
-            let csv = [headers.map(h => `"${h}"`).join(',')];
-            
-            extractedData.forEach(item => {
-                const row = [
-                    `"${item.cnpj}"`,
-                    `"${item.razaoSocial}"`,
-                    `"${item.periodoApuracao}"`,
-                    `"${item.dataVencimento}"`,
-                    `"${item.numeroDocumento}"`,
-                    `"${item.codigo}"`,
-                    `"${item.descricao}"`,
-                    `"${item.principal.toFixed(2)}"`,
-                    `"${item.multa.toFixed(2)}"`,
-                    `"${item.juros.toFixed(2)}"`,
-                    `"${item.total.toFixed(2)}"`
-                ];
-                csv.push(row.join(','));
-            });
-            
-            const csvContent = csv.join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `darf_extracted_${new Date().toISOString().slice(0,10)}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showStatus('success', 'Arquivo CSV baixado com sucesso!');
-        }
-
-        function exportToExcel() {
-            if (extractedData.length === 0) {
-                showStatus('error', 'Nenhum dado para copiar.');
-                return;
-            }
-
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
-            
-            let copyData = headers.join('\t') + '\n';
-            
-            extractedData.forEach(item => {
-                const row = [
-                    item.cnpj,
-                    item.razaoSocial,
-                    item.periodoApuracao,
-                    item.dataVencimento,
-                    item.numeroDocumento,
-                    item.codigo,
-                    item.descricao,
-                    item.principal.toFixed(2),
-                    item.multa.toFixed(2),
-                    item.juros.toFixed(2),
-                    item.total.toFixed(2)
-                ];
-                copyData += row.join('\t') + '\n';
-            });
-            
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(copyData).then(() => {
-                    showStatus('success', 'Dados copiados! Cole no Excel usando Ctrl+V');
-                }).catch(() => {
-                    showStatus('error', 'Erro ao copiar. Tente novamente.');
-                });
-            } else {
-                showStatus('error', 'Função de cópia não suportada neste navegador.');
-            }
-        }
-
-        // Inicialização
-        updateFileList();
-    </script>
-</body>
-</html>
+                taxSummary[item.
