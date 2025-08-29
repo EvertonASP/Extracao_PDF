@@ -1099,21 +1099,59 @@ function extrairCampos(texto) {
 }
 </script>
 <script>
-function extrairCampos(texto) {
-  const linhaCompactaPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{14,20})/i;
-  const arrecadacaoPattern = /(\d{2}\/\d{2}\/\d{4})\s+341\s+-\s+BANCO ITAU/i;
+// Carrega pdf.js
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.worker.min.js';
 
+// Expressões regulares
+const linhaCompactaPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-ZÀ-Ú\s]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{14,20})/i;
+const arrecadacaoPattern = /(\d{2}\/\d{2}\/\d{4})\s+341\s+-\s+BANCO ITAU/i;
+
+function extrairCampos(texto) {
   const linhaMatch = texto.match(linhaCompactaPattern);
   const arrecadacaoMatch = texto.match(arrecadacaoPattern);
 
   return {
-    cnpj: linhaMatch ? linhaMatch[1] : '',
-    razaoSocial: linhaMatch ? linhaMatch[2].trim() : '',
-    periodo: linhaMatch ? linhaMatch[3] : '',
-    vencimento: linhaMatch ? linhaMatch[4] : '',
-    documento: linhaMatch ? linhaMatch[5] : '',
-    arrecadacao: arrecadacaoMatch ? arrecadacaoMatch[1] : ''
+    cnpj: linhaMatch ? linhaMatch[1] : 'N/A',
+    razaoSocial: linhaMatch ? linhaMatch[2].trim() : 'N/A',
+    periodo: linhaMatch ? linhaMatch[3] : 'N/A',
+    vencimento: linhaMatch ? linhaMatch[4] : 'N/A',
+    documento: linhaMatch ? linhaMatch[5] : 'N/A',
+    arrecadacao: arrecadacaoMatch ? arrecadacaoMatch[1] : 'N/A'
   };
 }
+
+// Função para processar PDF
+async function processarPDF(url) {
+  const loadingTask = pdfjsLib.getDocument(url);
+  const pdf = await loadingTask.promise;
+  const totalPages = pdf.numPages;
+
+  const tabela = document.querySelector("table tbody");
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    const texto = content.items.map(item => item.str).join(" ");
+
+    const dados = extrairCampos(texto);
+
+    const linha = document.createElement("tr");
+    linha.innerHTML = `
+      <td>${dados.cnpj}</td>
+      <td>${dados.razaoSocial}</td>
+      <td>${dados.periodo}</td>
+      <td>${dados.vencimento}</td>
+      <td>${dados.documento}</td>
+      <td>${dados.arrecadacao}</td>
+    `;
+    tabela.appendChild(linha);
+  }
+}
+
+// Exemplo: carregar PDF do repositório
+window.addEventListener("DOMContentLoaded", () => {
+  processarPDF("424 -  57717655000100.pdf");
+});
 </script></body>
 </html>
