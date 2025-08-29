@@ -478,6 +478,7 @@
                         <th>Razão Social</th>
                         <th>Período de Apuração</th>
                         <th>Data de Vencimento</th>
+                        <th>Data de Arrecadação</th>
                         <th>Número do Documento</th>
                         <th>Código</th>
                         <th>Descrição</th>
@@ -680,10 +681,11 @@
             const cnpjPattern = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\s+([A-Z\s]+(?:LTDA|S\.A\.|EIRELI|ME|EPP|S\/A)?[A-Z\s]*)/;
             const periodoPattern = /Período\s+Apuração[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
             const vencimentoPattern = /Data\s+de\s+Vencimento[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
+            const arrecadacaoPattern = /Data\s+de\s+Arrecadacao[:\s]*(\d{2}\/\d{2}\/\d{4})/i;
             const documentoPattern = /Número\s+do\s+Documento[:\s]*(\d+)/i;
             
             // Extrair informações básicas
-            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '';
+            let cnpj = '', razaoSocial = '', periodo = '', vencimento = '', arrecadacao = '';
             
             const cnpjMatch = text.match(cnpjPattern);
             if (cnpjMatch) {
@@ -699,6 +701,11 @@
             const vencimentoMatch = text.match(vencimentoPattern);
             if (vencimentoMatch) {
                 vencimento = vencimentoMatch[1];
+
+            const arrecadacaoMatch = text.match(arrecadacaoPattern);
+            if (arrecadacaoMatch) {
+                arrecadacao = arrecadacaoMatch[1];
+                
             }
             
             // Extrair documentos - pode haver vários
@@ -708,7 +715,7 @@
                 documentos.push(match[1]);
             }
             
-            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodo, vencimento, documentos });
+            console.log('Dados básicos extraídos:', { cnpj, razaoSocial, periodo, vencimento, arrecadacao, documentos });
             
             // Patterns mais específicos para códigos e valores
             const patterns = [
@@ -771,6 +778,7 @@
                         razaoSocial: razaoSocial,
                         periodoApuracao: periodo,
                         dataVencimento: vencimento,
+                        dataArrecadacao: arrecadacao,
                         numeroDocumento: currentDocument,
                         codigo: codigo,
                         descricao: descricao,
@@ -814,6 +822,7 @@
                                 razaoSocial: razaoSocial || fileName.replace('.pdf', ''),
                                 periodoApuracao: periodo || 'N/A',
                                 dataVencimento: vencimento || 'N/A',
+                                dataArrecadacao: arrecadacao || 'N/A',
                                 numeroDocumento: currentDocument,
                                 codigo: codigo,
                                 descricao: descricao,
@@ -836,6 +845,7 @@
                     razaoSocial: razaoSocial || 'Não identificado',
                     periodoApuracao: periodo || 'Não identificado',
                     dataVencimento: vencimento || 'Não identificado',
+                    dataArrecadacao: arrecadacao || 'Não identificado',
                     numeroDocumento: 'Não identificado',
                     codigo: '0000',
                     descricao: 'ARQUIVO PROCESSADO - DADOS NÃO IDENTIFICADOS',
@@ -920,6 +930,7 @@
                         <td>${item.razaoSocial}</td>
                         <td>${item.periodoApuracao}</td>
                         <td>${item.dataVencimento}</td>
+                        <td>${item.dataArrecadacao}</td>
                         <td>${item.numeroDocumento}</td>
                         <td>${item.codigo}</td>
                         <td>${item.descricao}</td>
@@ -1007,7 +1018,7 @@
                 return;
             }
 
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
+            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Data de Arrecadação', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
             
             let csv = [headers.map(h => `"${h}"`).join(',')];
             
@@ -1017,6 +1028,7 @@
                     `"${item.razaoSocial}"`,
                     `"${item.periodoApuracao}"`,
                     `"${item.dataVencimento}"`,
+                    `"${item.dataArrecadacao}"`,
                     `"${item.numeroDocumento}"`,
                     `"${item.codigo}"`,
                     `"${item.descricao}"`,
@@ -1049,7 +1061,7 @@
                 return;
             }
 
-            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
+            const headers = ['CNPJ', 'Razão Social', 'Período de Apuração', 'Data de Vencimento', 'Data de Arrecadação', 'Número do Documento', 'Código', 'Descrição', 'Principal', 'Multa', 'Juros', 'Total'];
             
             let copyData = headers.join('\t') + '\n';
             
@@ -1059,6 +1071,7 @@
                     item.razaoSocial,
                     item.periodoApuracao,
                     item.dataVencimento,
+                    item.dataArrecadacao,
                     item.numeroDocumento,
                     item.codigo,
                     item.descricao,
